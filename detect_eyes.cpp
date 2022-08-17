@@ -112,16 +112,15 @@ int main() {
 		imshow("Graysclade", gray); // display window
 		if (!croppedEye.empty()) {
 			imshow("Cropped Eye", croppedEye); // display window
-			GaussianBlur(croppedEye, blur, Size(9, 9), 0); // apply gaussian blur
+			Mat histEqualized;
+			equalizeHist(croppedEye, histEqualized); // equalize
+			GaussianBlur(histEqualized, blur, Size(9, 9), 0); // apply gaussian blur
 			threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY_INV); 
 
-			int tempHeight1 = (int)((double)height*0.4);
-			int tempHeight2 = (int)((double)height*0.6);
-			cout << tempHeight1 << endl;
-			cout << tempHeight2 << endl;
-
-			Mat upper = thresh(Rect(0, 0, width, tempHeight2));
-			Mat lower = thresh(Rect(0, tempHeight2, width, tempHeight1));
+			int lowerHeight = (int)((double)height*0.4);
+			int upperHeight = (int)((double)height*0.6);
+			Mat upper = thresh(Rect(0, 0, width, upperHeight));
+			Mat lower = thresh(Rect(0, upperHeight, width, lowerHeight));
 
 			/* Calculate Histogram for Upper and Lower Eye */
 			MatND upperHist, lowerHist;
@@ -131,14 +130,12 @@ int main() {
 			float upperPixels = upperHist.at<float>(255);
 
 			if (upperPixels < lowerPixels) {
-				cout << "close" << endl;
+				cout << "close" << "fps" << averageFps() << endl;
 			} else {
-				cout << "open" << endl;
+				cout << "open" << "fps" << averageFps() << endl;
 			}
-
 			imshow("Upper", upper);
 			imshow("Lower", lower);
-			
 		}
 		
 		/* Exit at esc key */
