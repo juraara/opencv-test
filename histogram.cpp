@@ -79,9 +79,6 @@ int main() {
 		clock_t start = lClock(); // start counting
 		cap.read(frame);
 		if (frame.empty()) break;
-		// cout << "Width : " << frame.cols << endl;
-		// cout << "Height: " << frame.rows << endl;
-		// imshow("Frame", frame);
 	
 		/* Process image */
 		// crop = frame(Rect(170, 180, 230, 140)); // crop frame
