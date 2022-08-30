@@ -47,13 +47,6 @@ bool compareContourAreas(vector<Point> contour1, vector<Point> contour2) {
 
 /* Main */
 int main() {
-	/* PERCLOS */
-	int eyeState[65]; // 65 frames in 14fps should make 5fps for PERCLOS
-	double perclos = 0; // store result
-	int counter;
-	// double counterTime = 0; // 5s counter
-	// int overallTime = 0; // overall time
-	
 	/* Contour Detection */
 	Mat crop, gray, blur, thresh;
 	int minThresh = 20; // for thresholding
@@ -67,10 +60,11 @@ int main() {
 	int frameNo = 0; */
 
 	/* Video */
-	string path = "vid/jems-test.mp4";
+	string path = "vid/jems-cut.mp4"; // video path
 	VideoCapture cap(path);
 	Mat frame;
 	int frameNo = 0;
+	int counter = 0;
 	
 	/* Blink Util */
 	int tempEyeState = 0;
@@ -78,11 +72,10 @@ int main() {
 
 	while (true) {
 		clock_t start = lClock();
-		
 		cap.read(frame); // read stored frame
 		if (frame.empty()) break;
 		
-		/* Calculate Histogram */
+		/* Process Image */
 		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert to grayscale
 		imshow("Grayscale", gray); // display window
 		GaussianBlur(gray, blur, Size(9, 9), 0); // apply gaussian blur
@@ -104,7 +97,7 @@ int main() {
 		/* Print if blink */
 		if (tempEyeState == 1) {
 			cout << "(Close)";
-			cout << " Counter: " << counter++ << endl;
+			cout << " No. of Frames: " << counter++ << endl;
 			fetchedClock = lClock(); // start delay
 		}
 		
