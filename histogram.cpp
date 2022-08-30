@@ -45,53 +45,51 @@ double averageFps() {
 }
 
 int main() {
-	/* PERCLOS */
-	int eyeState[65]; // 65 frames in 14fps should make 5fps for PERCLOS
-	double perclos = 0; // store result
-	int counter = 0;
-	
 	/* Camera */
 	// VideoCapture cap(0); // default cam
 	Mat crop, gray, blur, thresh;
 	Mat upper; // (Custom)
 	int minThresh = 70; // for thresholding
 	int maxThresh = 255; // for thresholding
-	// int frameNo = 0;
 
 	/* Video */
-	string path = "vid/rhys-test.mp4";
+	// string path = "vid/jems-stabilized.mp4"; // video path
+	// string path = "vid/jun-stabilized.mp4"; // video path
+	// string path = "vid/mitcham-stabilized.mp4"; // video path
+	string path = "vid/norman-stabilized.mp4"; // video path
+	// string path = "vid/rhys-stabilized.mp4"; // video path
 	VideoCapture cap(path);
 	Mat frame;
 	int frameNo = 0;
+	int counter = 0;
+	int tempEyeState = 0;
 	
 	/* Black pixel values */
 	float prevFrame = 0.0;
 	float currentFrame = 0.0;
 	float percentageDifference = 0.0;
 	
-	/* Print Util */
-	int tempEyeState = 0;
-
-	/* Blink Util */
-	int fetchedClock = 0;
-	
 	while(true) {
 		clock_t start = lClock(); // start counting
 		cap.read(frame);
 		if (frame.empty()) break;
+
+		/* Get Height and Width */
+		int width = frame.cols;
+		int height = frame.rows;
 	
 		/* Process image */
-		// crop = frame(Rect(170, 180, 230, 140)); // crop frame
-		// imshow("Crop", crop); // display window
 		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert to grayscale
 		GaussianBlur(gray, blur, Size(9, 9), 0); // apply gaussian blur
-		// imshow("GaussianBlur", blur); // display window
 		threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY_INV); // apply thresholding
-		// imshow("Threshold", thresh); // display window
-		upper = thresh(Rect(0, 0, 228, 75));
+
+		/* Get Upper Portion of Image */
+		int upper_w = width;
+		int upper_h = (int)((double)height * 0.60);
+		upper = thresh(Rect(0, 0, upper_w, upper_h));
 		
 		/* Display frames */
-		line(gray, Point(0, 75), Point(228, 75), Scalar(0, 0, 255), 2, 8, 0);
+		line(gray, Point(0, upper_h), Point(upper_w, upper_h), Scalar(0, 0, 255), 2, 8, 0);
 		imshow("Grayscale", gray); // display window
 		imshow("Upper", upper);
 		
@@ -111,65 +109,22 @@ int main() {
 		Mat histImage(histHeight, histWidth, CV_8UC3, Scalar(0, 0, 0));
 		normalize(histogram, histogram, 0, histImage.rows, NORM_MINMAX, -1, Mat());
 		
-		/* Create Histogram Figure */
-		/* for (int i = 1; i < histSize; i++) {
-			line(histImage, Point(binWidth * (i - 1), histHeight = cvRound(histogram.at<float>(i - 1))),
-			Point(binWidth * (i), histHeight - cvRound(histogram.at<float>(i))),
-			Scalar(255, 0, 0), 2, 8, 0);
-		}
-		imshow("Histogram", histImage); */
-		
 		/* Compare Histogram Value from Previous Frame */
 		prevFrame = currentFrame;
 		currentFrame = histogram.at<float>(255);
 		percentageDifference = ((prevFrame - currentFrame) / ((prevFrame + currentFrame) / 2)) * 100;
-		
-		/* Switch Eye State Based on Percentage Difference */
-		/* if (percentageDifference >= 80.0) {
+
+		/* Check Percentage Difference */
+		if (percentageDifference >= 80.0) {
 			tempEyeState = 1;
-			cout << "(Close)";
-			cout << " Counter: " << counter++ << endl;
 		} else if (percentageDifference <= -80.0) {
 			tempEyeState = 0;
-		} */	
-		
-		/* Record Eye State */
-		// if (tempEyeState == 1) { 
-		// 	eyeState[counter] = 1;
-		// } else {
-		// 	eyeState[counter] = 0;
-		// }
-		
-		// counter++; // increment counter
-		// if(counter == 65) {
-		// 	counter = 0;
-		// 	/* Calculate PERCLOS */
-		// 	int sum = 0;
-		// 	for (int j = 0; j < 65; j++) {
-		// 		sum += eyeState[j];
-		// 	}
-		// 	perclos = (sum/65.0) * 100;
-		// }
-		
-		// /* Print to Terminal */
-		// double duration = lClock() - start; // stop counting
-		// double averageTimePerFrame = averageDuration(duration); // avg time per frame
-		// if (tempEyeState == 1) { 
-		// 	cout << "(Close)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl; 
-		// } else {
-		// 	cout << "(Open)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl;
-		// }
+		}
 
-		/* Create delay (200ms) after blink is detected (testing) */
-		if ((lClock() - fetchedClock) > 200) {
-			if (percentageDifference >= 80.0) {
-				tempEyeState = 1;
-				cout << "(Close)";
-				cout << " Counter: " << counter++ << endl;
-				fetchedClock = lClock(); // start delay
-			} else if (percentageDifference <= -80.0) {
-				tempEyeState = 0;
-			}
+		/* Print if blink */
+		if (tempEyeState == 1) {
+			cout << "(Close)";
+			cout << " Counter: " << counter++ << endl;
 		}
 		
 		/* Exit at esc key */

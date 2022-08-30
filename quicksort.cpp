@@ -105,7 +105,11 @@ int main() {
 	int frameNo = 0;
 
 	/* Video */
-	string path = "vid/jun-test.mp4";
+	// string path = "vid/jems-stabilized.mp4"; // video path
+	// string path = "vid/jun-stabilized.mp4"; // video path
+	// string path = "vid/mitcham-stabilized.mp4"; // video path
+	string path = "vid/norman-stabilized.mp4"; // video path
+	// string path = "vid/rhys-stabilized.mp4"; // video path
 	VideoCapture cap(path);
 	Mat frame;
 	int counter = 0;
@@ -113,7 +117,7 @@ int main() {
 
 
 	/* Blink Util */
-	int windowSize = 500; // 5s window (100fps * 5s) (average 1 blink every 5s)
+	int windowSize = 3000; // 5s window (100fps * 5s) (average 1 blink every 5s)
 	// int windowSize = 1800; // 60s window (30fps * 60s)
 	float framePixels[windowSize];
 	float sortedFramePixels[windowSize];
@@ -125,6 +129,15 @@ int main() {
 	while(true) {
 		clock_t start = lClock(); // start counting
 		cap.read(frame);
+		if (frame.empty()) {
+			cout << " Window Size: " << count << endl;
+			cout << "{";
+			for (const int &n : framePixels) {
+				cout << n << ", ";
+			}
+			cout << "}";
+			break;
+		} 
 	
 		/* Process image */
 		// crop = frame(Rect(170, 180, 230, 140)); // crop frame
@@ -207,41 +220,22 @@ int main() {
 				temp_counter = 0;
 			}
 
-			if ((lClock() - fetchedClock) > 200) {
-				if (temp_counter == 1) {
-					temp_counter = 0;
-					cout << "(Close)";
-					cout << " Counter: " << counter++;
-					cout << endl;
-					fetchedClock = lClock(); // start delay
-				}
+			if (temp_counter == 1) {
+				temp_counter = 0;
+				// cout << "(Close)";
+				// cout << " Counter: " << counter++;
+				// cout << endl;
 			}
 			
-
 			// cout << "Thresh: " << threshold;
 			// cout << " Avg Open Px: " << openStates;
 			// cout << " Avg Close Px: " << closeStates;
 			// cout << " Close: " << close;
 			// cout << " Open: " << open;
 			// cout << " temp_counter: " << temp_counter;
-			// cout << " close_old - close: " << close_old - close;
-			// cout << endl;
+			cout << " close_old - close: " << close_old - close;
+			cout << endl;
 			
-			/* PERCLOS */
-			double perclos = ((double)close / windowSize) * 100;
-			// cout << "Perclos: " << perclos << endl;
-			
-			/* Others */
-			double duration = lClock() - start; // stop counting
-			double averageTimePerFrame = averageDuration(duration); // avg time per frame
-			// cout << "Avg tpf: " << averageTimePerFrame << "ms" << endl;
-			// cout << "Avg fps: " << averageFps() << endl;
-
-			/* Temp */
-			// if (close > open) {
-			// 	cout << "(Close)";
-			// 	cout << " Counter: " << counter++ << endl;
-			// }
 		}
 		averageFps();
 		

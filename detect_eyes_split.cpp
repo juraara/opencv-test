@@ -55,7 +55,7 @@ int main() {
 	vector<Rect> faces;
 	Mat eyeROI;
 	Mat croppedEye;
-	faceCascade.load("./haarcascade_eye_tree_eyeglasses.xml");
+	faceCascade.load("./haarcascade/haarcascade_eye_tree_eyeglasses.xml");
 	int height = 0, width = 0;
 
 	float prevFrame = 0.0;
@@ -117,8 +117,8 @@ int main() {
 			GaussianBlur(croppedEye, blur, Size(9, 9), 0); // apply gaussian blur
 			threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY_INV); 
 
-			int lowerHeight = (int)((double)height*0.4);
-			int upperHeight = (int)((double)height*0.6);
+			int lowerHeight = (int)((double)height*0.5);
+			int upperHeight = (int)((double)height*0.5);
 			int upperY = (int)((double)height*0.2);
 			int lowerY = upperHeight;
 			Mat upper = thresh(Rect(0, upperY, width, upperHeight));
