@@ -40,109 +40,52 @@ double averageFps() {
 }
 
 int main() {
-	/* Contour Detection */
-	Mat crop, gray, blur, thresh;
-	int minThresh = 70; // for thresholding
-	int maxThresh = 255; // for thresholding
-	
 	/* Camera */
 	VideoCapture cap(0); // default cam
-	Mat frame; // store frames here
+	Mat frame, crop, gray; // store frames here
 	int frameNo = 0;
 	
 	/* Eye Detection */
 	CascadeClassifier faceCascade;
 	vector<Rect> faces;
-	Mat eyeROI;
-	Mat croppedEye;
 	faceCascade.load("./haarcascade_eye_tree_eyeglasses.xml");
-	int height = 0, width = 0;
+    int faceDetectDelay = 0;
 
-	float prevFrame = 0.0;
-	float currentFrame = 0.0;
-	float percentageDifference = 0.0;
-	int delay = 0; // delay
-
-	/* Histogram Utils */
-	MatND currentHist, prevHist;
-	int histSize = 256;
-	const int* channelNumbers = { 0 };
-	float channelRange[] = { 0.0, 256.0 };
-	const float* channelRanges = channelRange;
-	int numberBins = 256;
-
-	/* Init */
-	cap.read(frame); // read stored frame
-	crop = frame(Rect(170, 180, 230, 140)); // crop frame
-	cvtColor(crop, gray, COLOR_BGR2GRAY); // convert to grayscale
-	calcHist(&gray, 1, 0, Mat(), currentHist, 1, &numberBins, &channelRanges);
-	calcHist(&gray, 1, 0, Mat(), prevHist, 1, &numberBins, &channelRanges);
-	
 
 	while (true) {
 		cap.read(frame); // read stored frame
 		if (frame.empty()) break;
-		
-		crop = frame(Rect(170, 180, 230, 140)); // crop frame
-		cvtColor(crop, gray, COLOR_BGR2GRAY); // convert to grayscale
+		// crop = frame(Rect(0, 0, 480, 480)); // crop frame
+		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert to grayscale
 
-		/* Calculate Histogram */
-		if (delay < 15) {
-			delay++;
-			calcHist(&gray, 1, 0, Mat(), currentHist, 1, &numberBins, &channelRanges);
+		if (faceDetectDelay < 30) {
+			faceDetectDelay++;
 		} else {
-			delay = 0;
-			double histMatchingCorrelation = compareHist(currentHist, prevHist, HISTCMP_CORREL);
-			cout << "Matching Correlation: " << histMatchingCorrelation << endl;
-			
-			/* Detect Eyes if Hist Value Changes */
-			if (histMatchingCorrelation < 0.95) {
-				vector<Rect> faces;
-				faceCascade.detectMultiScale(gray, faces, 1.1, 10);
-				for (int i = 0; i < faces.size(); i++) {
-					eyeROI = gray(faces[i]);
-					height = faces[i].height; cout << "Height: " << height << endl;
-					width = faces[i].width; cout << "Widht: " << width << endl;
-					croppedEye = eyeROI;
-					rectangle(gray, faces[i].tl(), faces[i].br(), Scalar(255, 255, 255), 2);
-				}
+			faceDetectDelay = 0;
+			vector<Rect> faces;
+			faceCascade.detectMultiScale(gray, faces, 1.1, 10);
+			for (int i = 0; i < faces.size(); i++) {
+				rectangle(gray, faces[i].tl(), faces[i].br(), Scalar(255, 255, 255), 2);
 			}
-			calcHist(&gray, 1, 0, Mat(), prevHist, 1, &numberBins, &channelRanges);
 		}
-		imshow("Graysclade", gray); // display window
-		if (!croppedEye.empty()) {
-			imshow("Cropped Eye", croppedEye); // display window
-			Mat histEqualized;
-			equalizeHist(croppedEye, histEqualized); // equalize
-			GaussianBlur(histEqualized, blur, Size(9, 9), 0); // apply gaussian blur
-			threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY_INV); 
 
-			int lowerHeight = (int)((double)height*0.4);
-			int upperHeight = (int)((double)height*0.6);
-			Mat upper = thresh(Rect(0, 0, width, upperHeight));
-			Mat lower = thresh(Rect(0, upperHeight, width, lowerHeight));
+		/* faceDetectDelay = 0;
+		vector<Rect> faces;
+		faceCascade.detectMultiScale(gray, faces, 1.1, 10);
+		for (int i = 0; i < faces.size(); i++) {
+			rectangle(gray, faces[i].tl(), faces[i].br(), Scalar(255, 255, 255), 2);
+		} */
+		line(frame, Point(320, 0), Point(320, 480), Scalar(0, 255, 0), 1, 8, 0);
+		line(frame, Point(0, 240), Point(640, 240), Scalar(0, 255, 0), 1, 8, 0);
+		imshow("Grayscale", frame); // display
+		// cout << "Width : " << gray.cols << endl;
+		// cout << "Height: " << gray.rows << endl;
 
-			/* Calculate Histogram for Upper and Lower Eye */
-			MatND upperHist, lowerHist;
-			calcHist(&upper, 1, 0, Mat(), upperHist, 1, &numberBins, &channelRanges);
-			calcHist(&lower, 1, 0, Mat(), lowerHist, 1, &numberBins, &channelRanges);
-			float lowerPixels = lowerHist.at<float>(255);
-			float upperPixels = upperHist.at<float>(255);
-
-			if (upperPixels < lowerPixels) {
-				cout << "close" << "fps" << averageFps() << endl;
-			} else {
-				cout << "open" << "fps" << averageFps() << endl;
-			}
-			imshow("Upper", upper);
-			imshow("Lower", lower);
-		}
-		
 		/* Exit at esc key */
 		if (waitKey(1) == 27) {
-            cout << "Program terminated." << endl;
-            break;
-        }
+			cout << "Program terminated." << endl;
+			break;
+		}
 	}
 	cap.release();
 	destroyAllWindows();

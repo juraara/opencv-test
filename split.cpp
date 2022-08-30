@@ -49,33 +49,45 @@ int main() {
 	int counter;
 	
 	/* Camera */
-	VideoCapture cap(0); // default cam
-	Mat frame, crop, gray, blur, thresh;
+	// VideoCapture cap(0); // default cam
+	Mat crop, gray, blur, thresh;
 	Mat upper, lower; // upper and lower section of eyes
 	int minThresh = 70; // for thresholding
 	int maxThresh = 255; // for thresholding
 	int frameNo = 0;
-	
+
+	/* Video */
+	string path = "vid/norman-test.mp4";
+	VideoCapture cap(path);
+	Mat frame;
+
 	/* Print Utils */
 	int tempEyeState = 0;
+
+	/* Blink Util */
+	int fetchedClock = 0;
 	
 	while(true) {
 		clock_t start = lClock(); // start counting
 		cap.read(frame);
+		if (frame.empty()) break;
 	
 		/* Process image */
-		crop = frame(Rect(170, 180, 230, 140)); // crop frame
-		line(crop, Point(0, 70), Point(230, 70), Scalar(0, 0, 255), 2, 8, 0);
-		cvtColor(crop, gray, COLOR_BGR2GRAY); // convert to grayscale
+		// crop = frame(Rect(170, 180, 230, 140)); // crop frame
+		// line(frame, Point(0, 70), Point(228, 70), Scalar(0, 0, 255), 2, 8, 0);
+		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert to grayscale
 		GaussianBlur(gray, blur, Size(9, 9), 0); // apply gaussian blur
 		threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY_INV); // apply thresholding
-		upper = thresh(Rect(0, 0, 230, 70));
+		
+		int upper_length = 90;
+		int lower_length = 140 - upper_length;
+		upper = thresh(Rect(0, 0, 228, upper_length));
 		imshow("Upper", upper);
-		lower = thresh(Rect(0, 70, 230, 70));
+		lower = thresh(Rect(0, upper_length, 228, lower_length));
 		imshow("Lower", lower);
 		
 		/* Display frames */
-		line(gray, Point(0, 70), Point(230, 70), Scalar(0, 0, 255), 2, 8, 0);
+		line(gray, Point(0, upper_length), Point(228, upper_length), Scalar(0, 0, 255), 2, 8, 0);
 		imshow("Grayscale", gray); // display window
 		imshow("Upper", upper);
 		
@@ -100,32 +112,44 @@ int main() {
 		float lowerPixels = lowerHistogram.at<float>(255);
 		float upperPixels = upperHistogram.at<float>(255);
 		
-		if (upperPixels < lowerPixels) {
-			eyeState[counter] = 1;
-			tempEyeState = 1;
-		} else {
-			eyeState[counter] = 0;
-			tempEyeState = 0;
-		}
+		// if (upperPixels < lowerPixels) {
+		// 	eyeState[counter] = 1;
+		// 	tempEyeState = 1;
+		// } else {
+		// 	eyeState[counter] = 0;
+		// 	tempEyeState = 0;
+		// }
 		
-		counter++; // increment counter
-		if(counter == 65) {
-			counter = 0;
-			/* Calculate PERCLOS */
-			int sum = 0;
-			for (int j = 0; j < 65; j++) {
-				sum += eyeState[j];
+		// counter++; // increment counter
+		// if(counter == 65) {
+		// 	counter = 0;
+		// 	/* Calculate PERCLOS */
+		// 	int sum = 0;
+		// 	for (int j = 0; j < 65; j++) {
+		// 		sum += eyeState[j];
+		// 	}
+		// 	perclos = (sum/65.0) * 100;
+		// }
+		
+		// /* Print to Terminal */
+		// double duration = lClock() - start; // stop counting
+		// double averageTimePerFrame = averageDuration(duration); // avg time per frame
+		// if (tempEyeState == 1) { 
+		// 	cout << "(Close)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl; 
+		// } else {
+		// 	cout << "(Open)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl;
+		// }
+
+		/* Create delay (200ms) after blink is detected (testing) */
+		if ((lClock() - fetchedClock) > 500) {
+			if (upperPixels < lowerPixels) {
+				tempEyeState = 1;
+				cout << "(Close)";
+				cout << " Counter: " << counter++ << endl;
+				fetchedClock = lClock(); // start delay
+			} else {
+				tempEyeState = 0;
 			}
-			perclos = (sum/65.0) * 100;
-		}
-		
-		/* Print to Terminal */
-		double duration = lClock() - start; // stop counting
-		double averageTimePerFrame = averageDuration(duration); // avg time per frame
-		if (tempEyeState == 1) { 
-			cout << "(Close)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl; 
-		} else {
-			cout << "(Open)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl;
 		}
 		
 		/* Exit at esc key */

@@ -1,6 +1,4 @@
-/* Image Processing Module
- * (Contour Detection) 
- * Note: If the pixel value is smaller than the threshold, it is set to 0, otherwise it is set to a maximum value */
+
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
 #include <iostream>
@@ -64,73 +62,51 @@ int main() {
 	vector<Vec4i> hierarchy; // for finding contours
 	
 	/* Camera */
-	VideoCapture cap(0); // default cam
-	Mat frame; // store frames here
+	/* VideoCapture cap(0); // default cam
+	Mat frame; // for web
+	int frameNo = 0; */
+
+	/* Video */
+	string path = "vid/jems-test.mp4";
+	VideoCapture cap(path);
+	Mat frame;
 	int frameNo = 0;
-	
 	
 	/* Blink Util */
 	int tempEyeState = 0;
+	int fetchedClock = 0;
 
 	while (true) {
 		clock_t start = lClock();
 		
 		cap.read(frame); // read stored frame
-		// imshow("Image", frame); // window
 		if (frame.empty()) break;
 		
 		/* Calculate Histogram */
-		crop = frame(Rect(170, 180, 230, 140)); // crop frame
-		// imshow("Crop", crop); // display window
-		cvtColor(crop, gray, COLOR_BGR2GRAY); // convert to grayscale
+		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert to grayscale
 		imshow("Grayscale", gray); // display window
 		GaussianBlur(gray, blur, Size(9, 9), 0); // apply gaussian blur
-		// imshow("GaussianBlur", blur); // display window
 		threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY_INV); // apply thresholding
 		imshow("Threshold", thresh); // display window
 		
+		/* Contour Detection */
 		findContours(thresh, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
 		sort(contours.begin(), contours.end(), compareContourAreas);
-		
-		/* Create delay (500ms) after blink is detected (testing) */
-		/* if ((lClock() - fetchedClock) > 500) {
-			fetchedClock = lClock(); // start delay
-		} */
-		
+
+		/* Blink Detection Accuracy Test */
 		if (contours.size() == 0) {
 			tempEyeState = 1;
-			eyeState[counter] = 1;  // blink
 		}
 		else {
 			tempEyeState = 0;
-			eyeState[counter] = 0; // blink~janai
 		}
-		
-		counter++; // increment counter
-		if(counter == 65) {
-			counter = 0;
-			/* Calculate PERCLOS */
-			int sum = 0;
-			for (int j = 0; j < 65; j++) {
-				sum += eyeState[j];
-			}
-			perclos = (sum/65.0) * 100;
+
+		/* Print if blink */
+		if (tempEyeState == 1) {
+			cout << "(Close)";
+			cout << " Counter: " << counter++ << endl;
+			fetchedClock = lClock(); // start delay
 		}
-		
-		/* Print to Terminal */
-		double duration = lClock() - start; // stop counting
-		double averageTimePerFrame = averageDuration(duration); // avg time per frame
-		if (tempEyeState == 1) { 
-			cout << "(Close)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl; 
-		} else {
-			cout << "(Open)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl;
-		}
-		
-		/* Exit at esc key */
-		if (waitKey(1) == 27) {
-            cout << "Program terminated." << endl;
-            break;
-        }
 		
 		/* Exit at esc key */
 		if (waitKey(1) == 27) {

@@ -51,11 +51,17 @@ int main() {
 	int counter = 0;
 	
 	/* Camera */
-	VideoCapture cap(0); // default cam
-	Mat frame, crop, gray, blur, thresh;
+	// VideoCapture cap(0); // default cam
+	Mat crop, gray, blur, thresh;
 	Mat upper; // (Custom)
 	int minThresh = 70; // for thresholding
 	int maxThresh = 255; // for thresholding
+	// int frameNo = 0;
+
+	/* Video */
+	string path = "vid/rhys-test.mp4";
+	VideoCapture cap(path);
+	Mat frame;
 	int frameNo = 0;
 	
 	/* Black pixel values */
@@ -65,24 +71,30 @@ int main() {
 	
 	/* Print Util */
 	int tempEyeState = 0;
+
+	/* Blink Util */
+	int fetchedClock = 0;
 	
 	while(true) {
 		clock_t start = lClock(); // start counting
 		cap.read(frame);
+		if (frame.empty()) break;
+		// cout << "Width : " << frame.cols << endl;
+		// cout << "Height: " << frame.rows << endl;
 		// imshow("Frame", frame);
 	
 		/* Process image */
-		crop = frame(Rect(170, 180, 230, 140)); // crop frame
+		// crop = frame(Rect(170, 180, 230, 140)); // crop frame
 		// imshow("Crop", crop); // display window
-		cvtColor(crop, gray, COLOR_BGR2GRAY); // convert to grayscale
+		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert to grayscale
 		GaussianBlur(gray, blur, Size(9, 9), 0); // apply gaussian blur
 		// imshow("GaussianBlur", blur); // display window
 		threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY_INV); // apply thresholding
 		// imshow("Threshold", thresh); // display window
-		upper = thresh(Rect(0, 0, 230, 70));
+		upper = thresh(Rect(0, 0, 228, 75));
 		
 		/* Display frames */
-		line(gray, Point(0, 70), Point(230, 70), Scalar(0, 0, 255), 2, 8, 0);
+		line(gray, Point(0, 75), Point(228, 75), Scalar(0, 0, 255), 2, 8, 0);
 		imshow("Grayscale", gray); // display window
 		imshow("Upper", upper);
 		
@@ -116,37 +128,51 @@ int main() {
 		percentageDifference = ((prevFrame - currentFrame) / ((prevFrame + currentFrame) / 2)) * 100;
 		
 		/* Switch Eye State Based on Percentage Difference */
-		if (percentageDifference >= 80.0) {
+		/* if (percentageDifference >= 80.0) {
 			tempEyeState = 1;
+			cout << "(Close)";
+			cout << " Counter: " << counter++ << endl;
 		} else if (percentageDifference <= -80.0) {
 			tempEyeState = 0;
-		}	
+		} */	
 		
 		/* Record Eye State */
-		if (tempEyeState == 1) { 
-			eyeState[counter] = 1;
-		} else {
-			eyeState[counter] = 0;
-		}
+		// if (tempEyeState == 1) { 
+		// 	eyeState[counter] = 1;
+		// } else {
+		// 	eyeState[counter] = 0;
+		// }
 		
-		counter++; // increment counter
-		if(counter == 65) {
-			counter = 0;
-			/* Calculate PERCLOS */
-			int sum = 0;
-			for (int j = 0; j < 65; j++) {
-				sum += eyeState[j];
+		// counter++; // increment counter
+		// if(counter == 65) {
+		// 	counter = 0;
+		// 	/* Calculate PERCLOS */
+		// 	int sum = 0;
+		// 	for (int j = 0; j < 65; j++) {
+		// 		sum += eyeState[j];
+		// 	}
+		// 	perclos = (sum/65.0) * 100;
+		// }
+		
+		// /* Print to Terminal */
+		// double duration = lClock() - start; // stop counting
+		// double averageTimePerFrame = averageDuration(duration); // avg time per frame
+		// if (tempEyeState == 1) { 
+		// 	cout << "(Close)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl; 
+		// } else {
+		// 	cout << "(Open)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl;
+		// }
+
+		/* Create delay (200ms) after blink is detected (testing) */
+		if ((lClock() - fetchedClock) > 200) {
+			if (percentageDifference >= 80.0) {
+				tempEyeState = 1;
+				cout << "(Close)";
+				cout << " Counter: " << counter++ << endl;
+				fetchedClock = lClock(); // start delay
+			} else if (percentageDifference <= -80.0) {
+				tempEyeState = 0;
 			}
-			perclos = (sum/65.0) * 100;
-		}
-		
-		/* Print to Terminal */
-		double duration = lClock() - start; // stop counting
-		double averageTimePerFrame = averageDuration(duration); // avg time per frame
-		if (tempEyeState == 1) { 
-			cout << "(Close)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl; 
-		} else {
-			cout << "(Open)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl;
 		}
 		
 		/* Exit at esc key */

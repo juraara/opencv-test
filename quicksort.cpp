@@ -82,26 +82,53 @@ void quickSort(float arr[], int start, int end) {
     quickSort(arr, p + 1, end); // Sorting the right part
 }
 
+/* Rotate Array */
+void Rotate(float arr[], int d, int n)
+{
+    int p = 1;
+    while (p <= d) {
+        int last = arr[0];
+        for (int i = 0; i < n - 1; i++) {
+            arr[i] = arr[i + 1];
+        }
+        arr[n - 1] = last;
+        p++;
+    }
+}
+
 int main() {
 	/* Camera */
-	VideoCapture cap(0); // default cam
-	Mat frame, crop, gray, blur, thresh;
+	// VideoCapture cap(0); // default cam
+	Mat crop, gray, blur, thresh;
 	int minThresh = 50; // for thresholding
 	int maxThresh = 255; // for thresholding
 	int frameNo = 0;
-	
+
+	/* Video */
+	string path = "vid/jun-test.mp4";
+	VideoCapture cap(path);
+	Mat frame;
+	int counter = 0;
+	int fetchedClock = 0;
+
+
 	/* Blink Util */
-	float framePixels[65];
-	int arraySize = 65;
+	int windowSize = 500; // 5s window (100fps * 5s) (average 1 blink every 5s)
+	// int windowSize = 1800; // 60s window (30fps * 60s)
+	float framePixels[windowSize];
+	float sortedFramePixels[windowSize];
 	int count = 0;
+	int close = 0;
+	int open = 0;
+	int temp_counter = 0;
 	
 	while(true) {
 		clock_t start = lClock(); // start counting
 		cap.read(frame);
 	
 		/* Process image */
-		crop = frame(Rect(170, 180, 230, 140)); // crop frame
-		cvtColor(crop, gray, COLOR_BGR2GRAY); // convert to grayscale
+		// crop = frame(Rect(170, 180, 230, 140)); // crop frame
+		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert to grayscale
 		imshow("Gray", gray);
 		GaussianBlur(gray, blur, Size(9, 9), 0); // apply gaussian blur
 		threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY); // apply thresholding
@@ -124,62 +151,97 @@ int main() {
 		/* Store pixels per frame */
 		framePixels[count] = histogram.at<float>(0);
 		count++;
-		if (count == 65) {
-			count = 0;
+		if (count == windowSize) {
+			count = windowSize - 1;
+			
+			/* SHL Array */
+			Rotate(framePixels, 1, windowSize);
+
 			/* Quicksort */
-			cout << endl;
-			quickSort(framePixels, 0, arraySize - 1);
-			for (int i = 0; i < arraySize; i++) {
-				// cout << framePixels[i] << ", ";
+			for (int i = 0; i < windowSize; i++) {
+            	sortedFramePixels[i] = framePixels[i];
 			}
+			quickSort(sortedFramePixels, 0, windowSize - 1);
 			
 			/* Get Average Number of Pixels (Open State) */
-			int openEnd = arraySize - ((double)arraySize / 20); 
-			int openStart = arraySize - ((double)arraySize / 10);  
+			int openEnd = windowSize - ((double)windowSize / 20); 
+			int openStart = windowSize - ((double)windowSize / 10);  
 			float sumOpen = 0.0;
 			int openStates = 0;
 			for (int i = openStart; i <= openEnd; i++) {
-				sumOpen += framePixels[i];
+				sumOpen += sortedFramePixels[i];
 			}
-			openStates = sumOpen / (arraySize / 20);
-			cout << "Avg Open State Px.: " << openStates << endl;
+			openStates = sumOpen / (windowSize / 20);
+			// cout << "Avg Open State Px.: " << openStates << endl;
 			
 			/* Get Average Number of Pixels (Closed State) */
-			int closeEnd = arraySize / 10;
-			int closeStart = arraySize / 20;
+			int closeEnd = windowSize / 10;
+			int closeStart = windowSize / 20;
 			float sumClose = 0.0;
 			int closeStates = 0;
 			for (int i = closeStart; i <= closeEnd; i++) {
-				sumClose += framePixels[i];
+				sumClose += sortedFramePixels[i];
 			}
-			closeStates = sumClose / (arraySize / 20);
-			cout << "Avg. Closed State Px.: " << closeStates << endl; 
+			closeStates = sumClose / (windowSize / 20);
+			// cout << "Avg. Closed State Px.: " << closeStates << endl; 
 
 			/* Threshold P80 */
 			float threshold = (openStates - closeStates) * 0.2 +  closeStates;
 
-			/* Perform Racial Segregation */
-			int close = 0;
-			int open = 0;
-			for (int i = 0; i < arraySize; i++) {
+			/* Separate Open from Closed State */
+			int close_old = close;
+			int open_old = open;
+			close = 0;
+			open = 0;
+			for (int i = 0; i < windowSize; i++) {
 				if (framePixels[i] < threshold) {
 					close++;
 				} else {
 					open++;
 				}
 			}
-			cout << "Closed States: " << close << endl;
-			cout << "Open States: " << open << endl;
+
+			if (close_old - close == -1) {
+				temp_counter++;
+			} else { 
+				temp_counter = 0;
+			}
+
+			if ((lClock() - fetchedClock) > 200) {
+				if (temp_counter == 1) {
+					temp_counter = 0;
+					cout << "(Close)";
+					cout << " Counter: " << counter++;
+					cout << endl;
+					fetchedClock = lClock(); // start delay
+				}
+			}
+			
+
+			// cout << "Thresh: " << threshold;
+			// cout << " Avg Open Px: " << openStates;
+			// cout << " Avg Close Px: " << closeStates;
+			// cout << " Close: " << close;
+			// cout << " Open: " << open;
+			// cout << " temp_counter: " << temp_counter;
+			// cout << " close_old - close: " << close_old - close;
+			// cout << endl;
 			
 			/* PERCLOS */
-			double perclos = ((double)close / 65) * 100;
-			cout << "Perclos: " << perclos << endl;
+			double perclos = ((double)close / windowSize) * 100;
+			// cout << "Perclos: " << perclos << endl;
 			
 			/* Others */
 			double duration = lClock() - start; // stop counting
 			double averageTimePerFrame = averageDuration(duration); // avg time per frame
-			cout << "Avg tpf: " << averageTimePerFrame << "ms" << endl;
-			cout << "Avg fps: " << averageFps() << endl;
+			// cout << "Avg tpf: " << averageTimePerFrame << "ms" << endl;
+			// cout << "Avg fps: " << averageFps() << endl;
+
+			/* Temp */
+			// if (close > open) {
+			// 	cout << "(Close)";
+			// 	cout << " Counter: " << counter++ << endl;
+			// }
 		}
 		averageFps();
 		
