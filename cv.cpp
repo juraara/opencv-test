@@ -60,11 +60,11 @@ int main() {
 	int frameNo = 0; */
 
 	/* Video */
-	// string path = "vid/jems-stabilized.mp4"; // video path
+	string path = "vid/jems-stabilized.mp4"; // video path
 	// string path = "vid/jun-stabilized.mp4"; // video path
 	// string path = "vid/mitcham-stabilized.mp4"; // video path
 	// string path = "vid/norman-stabilized.mp4"; // video path
-	string path = "vid/rhys-stabilized.mp4"; // video path
+	// string path = "vid/rhys-stabilized.mp4"; // video path
 	VideoCapture cap(path);
 	Mat frame;
 	int frameNo = 0;
@@ -81,10 +81,8 @@ int main() {
 		
 		/* Process Image */
 		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert to grayscale
-		imshow("Grayscale", gray); // display window
 		GaussianBlur(gray, blur, Size(9, 9), 0); // apply gaussian blur
 		threshold(blur, thresh, minThresh, maxThresh, THRESH_BINARY_INV); // apply thresholding
-		imshow("Threshold", thresh); // display window
 		
 		/* Contour Detection */
 		findContours(thresh, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
@@ -104,6 +102,12 @@ int main() {
 			cout << " No. of Frames: " << counter++ << endl;
 			fetchedClock = lClock(); // start delay
 		}
+
+		/* Display Frames */
+		// imshow("Frame", frame); // display window
+		imshow("Grayscale", gray); // display window
+		// imshow("Blur", blur); // display window
+		imshow("Threshold", thresh); // display window
 		
 		/* Exit at esc key */
 		if (waitKey(1) == 27) {

@@ -60,8 +60,8 @@ int main() {
 	// string path = "vid/jems-stabilized.mp4"; // video path
 	// string path = "vid/jun-stabilized.mp4"; // video path
 	// string path = "vid/mitcham-stabilized.mp4"; // video path
-	string path = "vid/norman-stabilized.mp4"; // video path
-	// string path = "vid/rhys-stabilized.mp4"; // video path
+	// string path = "vid/norman-stabilized.mp4"; // video path
+	string path = "vid/rhys-stabilized.mp4"; // video path
 	VideoCapture cap(path);
 	Mat frame;
 
