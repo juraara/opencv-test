@@ -49,6 +49,36 @@ void detectEyes(Mat &frame, CascadeClassifier &eyeCascade) {
 	imshow("eye", eye);
 }
 
+/* Partition */
+int partition(float arr[], int start, int end) {
+    float pivot = arr[start];
+    int count = 0;
+    for (int i = start + 1; i <= end; i++) {
+        if (arr[i] <= pivot)
+            count++;
+    }
+    
+    /* Giving pivot element its correct position */
+    int pivotIndex = start + count;
+    swap(arr[pivotIndex], arr[start]);
+
+    /* Sorting left and right parts of the pivot element */
+    int i = start, j = end;
+    while (i < pivotIndex && j > pivotIndex) {
+ 
+        while (arr[i] <= pivot) {
+            i++;
+        }
+        while (arr[j] > pivot) {
+            j--;
+        }
+        if (i < pivotIndex && j > pivotIndex) {
+            swap(arr[i++], arr[j--]);
+        }
+    }
+    return pivotIndex;
+}
+
 void quickSort(float arr[], int start, int end) {
     if (start >= end) return; // base case
     int p = partition(arr, start, end); // partitioning the array
@@ -56,7 +86,7 @@ void quickSort(float arr[], int start, int end) {
     quickSort(arr, p + 1, end); // Sorting the right part
 }
 
-void Rotate(float arr[], int d, int n)
+void rotateArr(float arr[], int d, int n)
 {
     int p = 1;
     while (p <= d) {
@@ -69,48 +99,74 @@ void Rotate(float arr[], int d, int n)
     }
 }
 
-int windowSize = 1925;
+const int windowSize = 1925;
 float blackPixel[windowSize];
 
-void populateArr(string path) {
+/* Populate Array */
+void populateArr(string path, CascadeClassifier &eyeCascade) {
 	int i = 0;
 	VideoCapture cap(path);
 	Mat frame;
+
+	cap.read(frame);
+	if (frame.empty()) return;
+	gammaCorrection(frame, frame, 5);
+	detectEyes(frame, eyeCascade);
+
 	while (true) {
 		cap.read(frame);
 		if (frame.empty() || i == windowSize) {
 			break;
 		}
-
+		frame = frame(eyes[0]);
+		gammaCorrection(frame, frame, 1.5);
+		
 		Mat gray;
 		cvtColor(frame, gray, COLOR_BGR2GRAY); // convert image to grayscale
 		equalizeHist(gray, gray); // enchance image contrast
 		Mat blur;
 		GaussianBlur(gray, blur, Size(9, 9), 0);
 		Mat thresh;
-		threshold(blur, thresh, 20, 255, THRESH_BINARY_INV);
+		threshold(blur, thresh, 20, 255, THRESH_BINARY);
+
+		int upper_w = gray.cols;
+		int upper_h = (int)((double)gray.rows * 0.50);
+		Mat upper = thresh(Rect(0, 0, upper_w, upper_h));
 		
 		int histSize = 256;
 		float range[] = { 0, 256 }; //the upper boundary is exclusive
 		const float* histRange[] = { range };
 		bool uniform = true, accumulate = false;
 		Mat hist;
-		calcHist(&thresh, 1, 0, Mat(), hist, 1, &histSize, histRange, uniform, accumulate);
+		calcHist(&upper, 1, 0, Mat(), hist, 1, &histSize, histRange, uniform, accumulate);
 
 		blackPixel[i] = hist.at<float>(0);
+		printf("[%d] black pixels: %.1f\n", i, blackPixel[i]);
 		i++;
+
+		imshow("upper", upper);
+		if (waitKey(1) == 27) {
+            cout << "Program terminated." << endl;
+            break;
+        }
 	}
 
+	for (int i = 0; i < windowSize; i++){
+		cout << blackPixel[i] << " ";
+	}
+	cout << endl;
 }
 
+/* Blink Detection */
 int frameNo = 0;
 int blinkWindow = 0;
 
 int detectedBlinks[50];
 int blinkCounter = 0;
 
-int count = 0;
-int close = 0; open = 0;
+int counter = windowSize - 1;
+int close = 0, open = 0;
+int close_old = 0, open_old = 0;
 
 void detectBlink(Mat &frame) {
 	Mat gray;
@@ -119,23 +175,27 @@ void detectBlink(Mat &frame) {
 	Mat blur;
 	GaussianBlur(gray, blur, Size(9, 9), 0);
 	Mat thresh;
-	threshold(blur, thresh, 20, 255, THRESH_BINARY_INV);
+	threshold(blur, thresh, 20, 255, THRESH_BINARY);
+	
+	int upper_w = gray.cols;
+	int upper_h = (int)((double)gray.rows * 0.50);
+	Mat upper = thresh(Rect(0, 0, upper_w, upper_h));
 	
 	int histSize = 256;
     float range[] = { 0, 256 }; //the upper boundary is exclusive
     const float* histRange[] = { range };
     bool uniform = true, accumulate = false;
 	Mat hist;
-	calcHist(&thresh, 1, 0, Mat(), hist, 1, &histSize, histRange, uniform, accumulate);
+	calcHist(&upper, 1, 0, Mat(), hist, 1, &histSize, histRange, uniform, accumulate);
 
-	blackPixel[count] = hist.at<float>(0);
-	count++;
+	blackPixel[counter] = hist.at<float>(0);
+	counter++;
 
-	if (count == windowSize + 1) {
-		count = windowSize - 2;
+	if (counter == windowSize) {
+		counter = windowSize - 1;
 
 		/* SHL Array */
-		Rotate(blackPixel, 1, windowSize);
+		rotateArr(blackPixel, 1, windowSize);
 
 		/* Quicksort */
 		float sorted[windowSize];
@@ -168,7 +228,7 @@ void detectBlink(Mat &frame) {
 		float threshold = (openStates - closeStates) * 0.2 +  closeStates;
 
 		/* Separate Open from Closed State */
-		int close_old = close, open_old = open;
+		close_old = close; open_old = open;
 		close = 0; open = 0;
 		for (int i = 0; i < windowSize; i++) {
 			if (blackPixel[i] < threshold) { close++; } 
@@ -178,7 +238,7 @@ void detectBlink(Mat &frame) {
 
 	frameNo += 1;
 	if (blinkWindow == 0) {
-		if (close) { 
+		if (close_old < close) { 
 			detectedBlinks[blinkCounter] = frameNo;
 			blinkCounter += 1;
 			printf("[%d] blink\n", frameNo);
@@ -188,7 +248,6 @@ void detectBlink(Mat &frame) {
 		blinkWindow -= 1;
 	}
 
-	imshow("thresh", thresh);
 	imshow("upper", upper);
 }
 
@@ -226,7 +285,10 @@ int main() {
         std::cerr << "Could not load eye detector." << std::endl;
         return -1;
     }
-	VideoCapture cap("/home/pi/Desktop/opencv-test/vid/0x -15y.mp4");
+
+	string path = "/home/pi/Desktop/opencv-test/vid/0x 15y.mp4";
+	populateArr(path, eyeCascade);
+	VideoCapture cap(path);
 	Mat frame;
 	
 	cap.read(frame);

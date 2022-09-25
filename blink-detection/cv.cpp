@@ -52,7 +52,7 @@ void detectEyes(Mat &frame, CascadeClassifier &eyeCascade) {
 int frameNo = 0;
 int blinkWindow = 0;
 
-int detectedBlinks[50];
+int detectedBlinks[255];
 int blinkCounter = 0;
 
 RNG rng(12345);
@@ -65,7 +65,15 @@ void detectBlink(Mat &frame) {
 	GaussianBlur(gray, blur, Size(9, 9), 0);
 	Mat thresh;
 	threshold(blur, thresh, 20, 255, THRESH_BINARY_INV);
-	Mat upper = thresh(Rect(0, 0, gray.cols, (int)((double)gray.rows * 0.50)));
+	
+	double crop_percent = 0.2;
+	int x = thresh.cols * crop_percent;
+	int y = thresh.rows * crop_percent;
+	int src_w = thresh.cols * (1 - (crop_percent * 2));
+	int src_h = thresh.rows * (1 - (crop_percent * 2));
+	Mat crop = thresh(Rect(x, y, src_w, src_h));
+
+	Mat upper = crop(Rect(0, 0, crop.cols, (int)((double)crop.rows * 0.50)));
 
 	vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
@@ -82,7 +90,7 @@ void detectBlink(Mat &frame) {
 		if (contours.size() == 0) { 
 			detectedBlinks[blinkCounter] = frameNo;
 			blinkCounter += 1;
-			// printf("[%d] blink\n", frameNo);
+			printf("[%d] blink\n", frameNo);
 			blinkWindow = 20;
 		}
 	} else {
@@ -93,7 +101,7 @@ void detectBlink(Mat &frame) {
 	imshow("drawing", drawing);
 }
 
-int actualBlinks[30] = {706,766,826,886,946,1006,1066,1126,1186,1246,1306,1366,1426,1486,1546,1606,1666,1726,1786,1846,1906,1966,2026,2086,2146,2206,2266,2326,2386,2446};
+int actualBlinks[30] = {1512,1573,1634,1693,1758,1810,1876,1935,1996,2052,2115,2172,2237,2294,2350,2407,2472,2537,2601,2655,2712,2764,2830,2884,2942,3001,3067,3127,3180,3237};
 
 void getBlinkAccuracy() {
 	int truePositive = 0, falsePositive = 0, falseNegative = 0;
@@ -102,7 +110,11 @@ void getBlinkAccuracy() {
 		if (detectedBlinks[i] >= actualBlinks[0] - window && detectedBlinks[i] <= actualBlinks[30-1] + window) {
 			for (int j = 0; j < sizeof(actualBlinks)/sizeof(actualBlinks[0]); j++) {
 				if (detectedBlinks[i] >= actualBlinks[j] - window && detectedBlinks[i] <= actualBlinks[j] + window) {
-					truePositive += 1;
+					if ((detectedBlinks[i] - detectedBlinks[i-1]) < 40) {
+						falsePositive += 1;
+					} else {
+						truePositive += 1;
+					}
 					break;
 				} else {
 					if (j == sizeof(actualBlinks)/sizeof(actualBlinks[0]) - 1) {
@@ -127,7 +139,7 @@ int main() {
         std::cerr << "Could not load eye detector." << std::endl;
         return -1;
     }
-	VideoCapture cap("/home/pi/Desktop/opencv-test/vid/0x -15y.mp4");
+	VideoCapture cap("/home/pi/Desktop/opencv-test/vid/-75x 15y.mp4");
 	Mat frame;
 	
 	cap.read(frame);
@@ -138,6 +150,12 @@ int main() {
 	while (true) {
 		cap.read(frame); // read stored frame
 		if (frame.empty()) break;
+
+		if (frameNo == actualBlinks[0] - 20) {
+			gammaCorrection(frame, frame, 5);
+			detectEyes(frame, eyeCascade);
+		}
+
 		frame = frame(eyes[0]);
 		gammaCorrection(frame, frame, 1.5);
 		detectBlink(frame);
