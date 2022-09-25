@@ -38,7 +38,7 @@ std::vector<cv::Rect> eyes;
 void detectEyes(Mat &frame, CascadeClassifier &eyeCascade) {
 	Mat gray;
 	cvtColor(frame, gray, COLOR_BGR2GRAY); // convert image to grayscale
-	equalizeHist(gray, gray); // enchance image contrast
+	// equalizeHist(gray, gray); // enchance image contrast
 
     eyeCascade.detectMultiScale(gray, eyes, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, cv::Size(30, 30));
 	if (eyes.size() == 0) return; // no eye was detected
@@ -49,10 +49,18 @@ void detectEyes(Mat &frame, CascadeClassifier &eyeCascade) {
 	imshow("eye", eye);
 }
 
+void cropSides(Mat &src, Mat &dst, double crop_percent) {
+	int x = src.cols * crop_percent;
+	int y = src.rows * crop_percent;
+	int src_w = src.cols * (1 - (crop_percent * 2));
+	int src_h = src.rows * (1 - (crop_percent * 2));
+	dst = src(Rect(x, y, src_w, src_h));
+}
+
 int frameNo = 0;
 int blinkWindow = 0;
 
-int detectedBlinks[50];
+int detectedBlinks[255];
 int blinkCounter = 0;
 
 float prevFrameWhitePixelNo = 0.0;
@@ -67,10 +75,12 @@ void detectBlink(Mat &frame) {
 	GaussianBlur(gray, blur, Size(9, 9), 0);
 	Mat thresh;
 	threshold(blur, thresh, 20, 255, THRESH_BINARY_INV);
-	
-	int upper_w = gray.cols;
-	int upper_h = (int)((double)gray.rows * 0.60);
-	Mat upper = thresh(Rect(0, 0, upper_w, upper_h));
+	Mat crop;
+	cropSides(thresh, crop, 0.2);
+
+	int upper_w = crop.cols;
+	int upper_h = (int)((double)crop.rows * 0.50);
+	Mat upper = crop(Rect(0, 0, upper_w, upper_h));
 	
 	int histSize = 256;
     float range[] = { 0, 256 }; //the upper boundary is exclusive
@@ -83,9 +93,9 @@ void detectBlink(Mat &frame) {
 	currFrameWhitePixelNo = hist.at<float>(255);
 	float percentDiff = ((prevFrameWhitePixelNo - currFrameWhitePixelNo) / ((prevFrameWhitePixelNo + currFrameWhitePixelNo) / 2)) * 100;
 
-	if (percentDiff >= 80.0) {
+	if (percentDiff >= 40.0) {
 		close = true;
-	} else if (percentDiff <= -80.0) {
+	} else if (percentDiff <= -40.0) {
 		close = false;
 	}
 
@@ -105,30 +115,50 @@ void detectBlink(Mat &frame) {
 	imshow("upper", upper);
 }
 
-int actualBlinks[30] = {1512,1573,1634,1693,1758,1810,1876,1935,1996,2052,2115,2172,2237,2294,2350,2407,2472,2537,2601,2655,2712,2764,2830,2884,2942,3001,3067,3127,3180,3237};
+int countNonzero(int arr[], int size) {
+	int count = 0;
+	for (int i = 0; i < size; i++) {
+		if (arr[i]) {
+			count++;
+		}
+	}
+	return count;
+}
+
+bool isBetween(int val, int start, int end) {
+	return val >= start && val <= end;
+}
 
 void getBlinkAccuracy() {
+	// int actualBlinks[30] = {15,75,135,195,255,315,375,435,495,555,615,675,735,795,855,915,975,1035,1095,1155,1215,1275,1335,1395,1455,1515,1575,1635,1695,1755};
+	// int actualBlinks[30] = {8,68,128,188,248,308,368,428,488,548,608,668,728,788,848,908,968,1028,1088,1148,1208,1268,1328,1388,1448,1508,1568,1628,1688,1748};
+	int actualBlinks[30] = {27,87,147,207,267,327,387,447,507,567,627,687,747,807,867,927,987,1047,1107,1167,1227,1287,1347,1407,1467,1527,1587,1647,1707,1767};
+	// int actualBlinks[30] = {11,71,131,191,251,311,371,431,491,551,611,671,731,791,851,911,971,1031,1091,1151,1211,1271,1331,1391,1451,1511,1571,1631,1691,1751};
+	// int actualBlinks[30] = {10,70,130,190,250,310,370,430,490,550,610,670,730,790,850,910,970,1030,1090,1150,1210,1270,1330,1390,1450,1510,1570,1630,1690,1750};
+	// int actualBlinks[30] = {20,80,140,200,260,320,380,440,500,560,620,680,740,800,860,920,980,1040,1100,1160,1220,1280,1340,1400,1460,1520,1580,1640,1700,1760};
+	// int actualBlinks[30] = {33,93,153,213,273,333,393,453,513,573,633,693,753,813,873,933,993,1053,1113,1173,1233,1293,1353,1413,1473,1533,1593,1653,1713,1773};
+	// int actualBlinks[30] = {71,131,191,251,311,371,431,491,551,611,671,731,791,851,911,971,1031,1091,1151,1211,1271,1331,1391,1451,1511,1571,1631,1691,1751,1811};
+	// int actualBlinks[30] = {27,87,147,207,267,327,387,447,507,567,627,687,747,807,867,927,987,1047,1107,1167,1227,1287,1347,1407,1467,1527,1587,1647,1707,1767};
+
 	int truePositive = 0, falsePositive = 0, falseNegative = 0;
 	int window = 20;
-	for (int i = 0; i < sizeof(detectedBlinks)/sizeof(detectedBlinks[0]); i++) {
-		if (detectedBlinks[i] >= actualBlinks[0] - window && detectedBlinks[i] <= actualBlinks[30-1] + window) {
-			for (int j = 0; j < sizeof(actualBlinks)/sizeof(actualBlinks[0]); j++) {
-				if (detectedBlinks[i] >= actualBlinks[j] - window && detectedBlinks[i] <= actualBlinks[j] + window) {
-					if ((detectedBlinks[i] - detectedBlinks[i-1]) < 40) {
-						falsePositive += 1;
-					} else {
-						truePositive += 1;
-					}
+
+	for (int i = 0; i < countNonzero(detectedBlinks, 255); i++) {
+		if (isBetween(detectedBlinks[i], actualBlinks[0] - window, actualBlinks[30-1] + window)) {
+			for (int j = 0; j < countNonzero(actualBlinks, 30); j++) {
+				if (isBetween(detectedBlinks[i], actualBlinks[j] - window, actualBlinks[j] + window)) {
+					if (isBetween((detectedBlinks[i] - detectedBlinks[i-1]), window + 1, 60 - window)) { falsePositive += 1; } 
+					else { truePositive += 1; }
 					break;
-				} else {
-					if (j == sizeof(actualBlinks)/sizeof(actualBlinks[0]) - 1) {
-						falsePositive += 1;
-					}
+				} 
+				else if (j == countNonzero(actualBlinks, 30) - 1) {
+					falsePositive += 1;
 				}
 			}
 		}
 	}
 
+	/* Calculate */
 	falseNegative = sizeof(actualBlinks)/sizeof(actualBlinks[0]) - truePositive;
 	double detectionRate = (double)truePositive/(truePositive + falseNegative) * 100;
 	double falseAlarmRate = (double)falsePositive/(truePositive + falsePositive) * 100;
@@ -143,24 +173,27 @@ int main() {
         std::cerr << "Could not load eye detector." << std::endl;
         return -1;
     }
-	VideoCapture cap("/home/pi/Desktop/opencv-test/vid/0x 15y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/0x 15y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/0x -15y.mp4");
+	VideoCapture cap("/home/pi/Desktop/opencv-test/vid/0x -45y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/75x 15y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/75x -15y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/75x -45y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/-75x 15y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/-75x -15y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/-75x -45y.mp4");
 	Mat frame;
 	
 	cap.read(frame);
 	if (frame.empty()) return -1;
 	gammaCorrection(frame, frame, 5);
 	detectEyes(frame, eyeCascade);
+	Rect eyeRIO = eyes[0];
 
 	while (true) {
 		cap.read(frame); // read stored frame
 		if (frame.empty()) break;
-
-		if (frameNo == actualBlinks[0] - 20) {
-			gammaCorrection(frame, frame, 5);
-			detectEyes(frame, eyeCascade);
-		}
-
-		frame = frame(eyes[0]);
+		frame = frame(eyeRIO);
 		gammaCorrection(frame, frame, 1.5);
 		detectBlink(frame);
 		imshow("frame", frame);	
