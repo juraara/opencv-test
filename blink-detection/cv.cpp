@@ -124,10 +124,10 @@ void getBlinkAccuracy() {
 	// int actualBlinks[30] = {27,87,147,207,267,327,387,447,507,567,627,687,747,807,867,927,987,1047,1107,1167,1227,1287,1347,1407,1467,1527,1587,1647,1707,1767};
 	// int actualBlinks[30] = {11,71,131,191,251,311,371,431,491,551,611,671,731,791,851,911,971,1031,1091,1151,1211,1271,1331,1391,1451,1511,1571,1631,1691,1751};
 	// int actualBlinks[30] = {10,70,130,190,250,310,370,430,490,550,610,670,730,790,850,910,970,1030,1090,1150,1210,1270,1330,1390,1450,1510,1570,1630,1690,1750};
-	// int actualBlinks[30] = {20,80,140,200,260,320,380,440,500,560,620,680,740,800,860,920,980,1040,1100,1160,1220,1280,1340,1400,1460,1520,1580,1640,1700,1760};
+	int actualBlinks[30] = {20,80,140,200,260,320,380,440,500,560,620,680,740,800,860,920,980,1040,1100,1160,1220,1280,1340,1400,1460,1520,1580,1640,1700,1760};
 	// int actualBlinks[30] = {33,93,153,213,273,333,393,453,513,573,633,693,753,813,873,933,993,1053,1113,1173,1233,1293,1353,1413,1473,1533,1593,1653,1713,1773};
 	// int actualBlinks[30] = {71,131,191,251,311,371,431,491,551,611,671,731,791,851,911,971,1031,1091,1151,1211,1271,1331,1391,1451,1511,1571,1631,1691,1751,1811};
-	int actualBlinks[30] = {27,87,147,207,267,327,387,447,507,567,627,687,747,807,867,927,987,1047,1107,1167,1227,1287,1347,1407,1467,1527,1587,1647,1707,1767};
+	// int actualBlinks[30] = {27,87,147,207,267,327,387,447,507,567,627,687,747,807,867,927,987,1047,1107,1167,1227,1287,1347,1407,1467,1527,1587,1647,1707,1767};
 
 	int truePositive = 0, falsePositive = 0, falseNegative = 0;
 	int window = 20;
@@ -167,22 +167,22 @@ int main() {
 	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/0x -45y.mp4");
 	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/75x 15y.mp4");
 	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/75x -15y.mp4");
-	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/75x -45y.mp4");
+	VideoCapture cap("/home/pi/Desktop/opencv-test/vid/75x -45y.mp4");
 	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/-75x 15y.mp4");
 	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/-75x -15y.mp4");
-	VideoCapture cap("/home/pi/Desktop/opencv-test/vid/-75x -45y.mp4");
+	// VideoCapture cap("/home/pi/Desktop/opencv-test/vid/-75x -45y.mp4");
 	Mat frame;
 	
 	cap.read(frame);
 	if (frame.empty()) return -1;
-	gammaCorrection(frame, frame, 20);
+	gammaCorrection(frame, frame, 5);
 	detectEyes(frame, eyeCascade);
 
 	while (true) {
 		cap.read(frame); // read stored frame
 		if (frame.empty()) break;
 		frame = frame(eyes[0]);
-		gammaCorrection(frame, frame, 1.5);
+		gammaCorrection(frame, frame, 5);
 		detectBlink(frame);
 		imshow("frame", frame);	
 		if (waitKey(1) == 27) {

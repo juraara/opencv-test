@@ -13,6 +13,7 @@ class BlinkDetectionAlgorithm {
     public: int blinkWindow = 0;
     public: int detectedBlinks[255] = { 0 };
     public: int blinkCounter = 0;
+    public: int window = 25;
 
     /* Gamma Correction */
     public: void gammaCorrection(const Mat &src, Mat &dst, const float gamma) {
@@ -54,7 +55,6 @@ class BlinkDetectionAlgorithm {
     /* Calculate Blink Accuracy */
     public: void getBlinkAccuracy(int detectedBlinks[255], int ref[30]) {
         int truePositive = 0, falsePositive = 0, falseNegative = 0;
-        int window = 20;
 
         for (int i = 0; i < countNonzero(detectedBlinks, 255); i++) {
             if (isBetween(detectedBlinks[i], ref[0] - window, ref[30-1] + window)) {
@@ -74,8 +74,8 @@ class BlinkDetectionAlgorithm {
         falseNegative = countNonzero(ref, 30) - truePositive;
         double detectionRate = (double)truePositive/(truePositive + falseNegative) * 100;
         double falseAlarmRate = (double)falsePositive/(truePositive + falsePositive) * 100;
-        double successRate = (double)detectionRate/(detectionRate + falseAlarmRate) * 100;
-        printf("TP: %d FP: %d FN: %d DR: %.2f FAR: %.2f Success Rate: %.2f\n", truePositive, falsePositive, falseNegative, detectionRate, falseAlarmRate, successRate);
+        double criticalSuccessIndex = (double)truePositive/(truePositive + falsePositive + falseNegative) * 100;
+        printf("TP: %d FP: %d FN: %d DR: %.2f FAR: %.2f CSI(TS): %.2f\n", truePositive, falsePositive, falseNegative, detectionRate, falseAlarmRate, criticalSuccessIndex);
     }
 
     /* Util */
@@ -132,7 +132,7 @@ class ContourDetectionAndAnalysis: public BlinkDetectionAlgorithm {
                 detectedBlinks[blinkCounter] = frameNo;
                 blinkCounter += 1;
                 // printf("[%d] blink\n", frameNo);
-                blinkWindow = 20;
+                blinkWindow = window;
             }
         } else {
             blinkWindow -= 1;
@@ -190,8 +190,8 @@ class GlobalThresholdingOfNegative: public BlinkDetectionAlgorithm {
             if (close) { 
                 detectedBlinks[blinkCounter] = frameNo;
                 blinkCounter += 1;
-                printf("[%d] blink\n", frameNo);
-                blinkWindow = 20;
+                // printf("[%d] blink\n", frameNo);
+                blinkWindow = window;
             }
         } else {
             blinkWindow -= 1;
@@ -220,7 +220,7 @@ class EyeBlackPixelRatioAnalysis: public BlinkDetectionAlgorithm {
         Mat crop = thresh(Rect(x, y, src_w, src_h));
 
         int upper_w = crop.cols;
-        int upper_h = (int)((double)crop.rows * 0.55);
+        int upper_h = (int)((double)crop.rows * 0.60);
         int lower_w = upper_w;
         int lower_h = crop.rows - upper_h;
         Mat upper = crop(Rect(0, 0, upper_w, upper_h));
@@ -242,8 +242,8 @@ class EyeBlackPixelRatioAnalysis: public BlinkDetectionAlgorithm {
             if (whitePixelNo_up < whitePixelNo_low) { 
                 detectedBlinks[blinkCounter] = frameNo;
                 blinkCounter += 1;
-                printf("[%d] blink\n", frameNo);
-                blinkWindow = 20;
+                // printf("[%d] blink\n", frameNo);
+                blinkWindow = window;
             }
         } else {
             blinkWindow -= 1;
@@ -332,7 +332,7 @@ class QuickSortAndAnalysis: public BlinkDetectionAlgorithm {
     private: float blackPixel[windowSize];
 
     public: void populateArr(string path, CascadeClassifier &eyeCascade) {
-        cout << "Populating array..." << endl;
+        // cout << "Populating array..." << endl;
         int i = 0;
         VideoCapture cap(path);
         Mat frame;
@@ -344,6 +344,7 @@ class QuickSortAndAnalysis: public BlinkDetectionAlgorithm {
         while (true) {
             cap.read(frame);
             if (frame.empty() || i == windowSize) { break; }
+            if (eyeRIO.empty()) break;
             frame = frame(eyeRIO);
             Mat upper;
             formatFrame(frame, upper);
@@ -439,7 +440,7 @@ class QuickSortAndAnalysis: public BlinkDetectionAlgorithm {
                 detectedBlinks[blinkCounter] = frameNo;
                 blinkCounter += 1;
                 // printf("[%d] blink\n", frameNo);
-                blinkWindow = 20;
+                blinkWindow = window;
             }
         } else {
             blinkWindow -= 1;
@@ -476,6 +477,7 @@ class MyClass: public BlinkDetectionAlgorithm {
         while (true) {
             cap.read(frame);
             if (frame.empty()) break;
+            if (eyeRIO.empty()) break;
             frame = frame(eyeRIO);
 
             switch (code) {
@@ -496,23 +498,58 @@ class MyClass: public BlinkDetectionAlgorithm {
             case 3: getBlinkAccuracy(obj3.detectedBlinks, ref); break;
             default: getBlinkAccuracy(obj4.detectedBlinks, ref); break;
         }
-        cout << "test" << endl;
 	}
 };
 
 int main() {
     int ref[9][30] = {
-        {15,75,135,195,255,315,375,435,495,555,615,675,735,795,855,915,975,1035,1095,1155,1215,1275,1335,1395,1455,1515,1575,1635,1695,1755},{8,68,128,188,248,308,368,428,488,548,608,668,728,788,848,908,968,1028,1088,1148,1208,1268,1328,1388,1448,1508,1568,1628,1688,1748},{27,87,147,207,267,327,387,447,507,567,627,687,747,807,867,927,987,1047,1107,1167,1227,1287,1347,1407,1467,1527,1587,1647,1707,1767},{11,71,131,191,251,311,371,431,491,551,611,671,731,791,851,911,971,1031,1091,1151,1211,1271,1331,1391,1451,1511,1571,1631,1691,1751},{10,70,130,190,250,310,370,430,490,550,610,670,730,790,850,910,970,1030,1090,1150,1210,1270,1330,1390,1450,1510,1570,1630,1690,1750},{20,80,140,200,260,320,380,440,500,560,620,680,740,800,860,920,980,1040,1100,1160,1220,1280,1340,1400,1460,1520,1580,1640,1700,1760},{33,93,153,213,273,333,393,453,513,573,633,693,753,813,873,933,993,1053,1113,1173,1233,1293,1353,1413,1473,1533,1593,1653,1713,1773},{71,131,191,251,311,371,431,491,551,611,671,731,791,851,911,971,1031,1091,1151,1211,1271,1331,1391,1451,1511,1571,1631,1691,1751,1811},{27,87,147,207,267,327,387,447,507,567,627,687,747,807,867,927,987,1047,1107,1167,1227,1287,1347,1407,1467,1527,1587,1647,1707,1767}
+        {11,71,131,191,251,311,371,431,491,551,611,671,731,791,851,911,971,1031,1091,1151,1211,1271,1331,1391,1451,1511,1571,1631,1691,1751},{15,75,135,195,255,315,375,435,495,555,615,675,735,795,855,915,975,1035,1095,1155,1215,1275,1335,1395,1455,1515,1575,1635,1695,1755},{11,71,131,191,251,311,371,431,491,551,611,671,731,791,851,911,971,1031,1091,1151,1211,1271,1331,1391,1451,1511,1571,1631,1691,1751},{30,90,150,210,270,330,390,450,510,570,630,690,750,810,870,930,990,1050,1110,1170,1230,1290,1350,1410,1470,1530,1590,1650,1710,1770},{24,84,144,204,264,324,384,444,504,564,624,684,744,804,864,924,984,1044,1104,1164,1224,1284,1344,1404,1464,1524,1584,1644,1704,1764},{18,78,138,198,258,318,378,438,498,558,618,678,738,798,858,918,978,1038,1098,1158,1218,1278,1338,1398,1458,1518,1578,1638,1698,1758},{8,68,128,188,248,308,368,428,488,548,608,668,728,788,848,908,968,1028,1088,1148,1208,1268,1328,1388,1448,1508,1568,1628,1688,1748},{16,76,136,196,256,316,376,436,496,556,616,676,736,796,856,916,976,1036,1096,1156,1216,1276,1336,1396,1456,1516,1576,1636,1696,1756},{15,75,135,195,255,315,375,435,495,555,615,675,735,795,855,915,975,1035,1095,1155,1215,1275,1335,1395,1455,1515,1575,1635,1695,1755}
     };
     
     string path[9] = {
         "/home/pi/Desktop/opencv-test/vid/0x 15y.mp4","/home/pi/Desktop/opencv-test/vid/0x -15y.mp4","/home/pi/Desktop/opencv-test/vid/0x -45y.mp4","/home/pi/Desktop/opencv-test/vid/75x 15y.mp4","/home/pi/Desktop/opencv-test/vid/75x -15y.mp4","/home/pi/Desktop/opencv-test/vid/75x -45y.mp4","/home/pi/Desktop/opencv-test/vid/-75x 15y.mp4","/home/pi/Desktop/opencv-test/vid/-75x -15y.mp4","/home/pi/Desktop/opencv-test/vid/-75x -45y.mp4"
     };
 
+    string angles[9] = {
+        "0x,15y","0x,n15y","0x,n45y","75x,15y","75x,n15y","75x,n45y","n75x,15y","n75x,n15y","n75x,n45y"
+    };
+
+    cout << "Testing (1/4)" << endl;
+    cout << "Contour Detection and Analysis" << endl;
     MyClass contourDetectionAndAnalysis[9];
-    // contourDetectionAndAnalysis[0].myMethod(path[0], ref[0], 4);
+    // contourDetectionAndAnalysis[0].myMethod(path[5], ref[5], 2);
     for (int i = 0; i < 9; i++) {
+        cout << "(" << i+1 << "/9) ";
+        cout << angles[i] << ": ";
         contourDetectionAndAnalysis[i].myMethod(path[i], ref[i], 1);
     }
+    cout << endl;
+    cout << "Testing (2/4)" << endl;
+    cout << "Global Thresholding of Negative" << endl;
+    MyClass globalThresholdingOfNegative[9];
+    for (int i = 0; i < 9; i++) {
+        cout << "(" << i+1 << "/9) ";
+        cout << angles[i] << ": ";
+        globalThresholdingOfNegative[i].myMethod(path[i], ref[i], 2);
+    }
+    cout << endl;
+    cout << "Testing (3/4)" << endl;
+    cout << "Eye Black Pixel Ratio Analysis" << endl;
+    MyClass eyeBlackPixelRatioAnalysis[9];
+    for (int i = 0; i < 9; i++) {
+        cout << "(" << i+1 << "/9) ";
+        cout << angles[i] << ": ";
+        eyeBlackPixelRatioAnalysis[i].myMethod(path[i], ref[i], 3);
+    }
+    cout << endl;
+    cout << "Testing (4/4)" << endl;
+    cout << "Quick Sort and Analysis" << endl;
+    MyClass quickSortAndAnalysis[9];
+    for (int i = 0; i < 9; i++) {
+        cout << "(" << i+1 << "/9) ";
+        cout << angles[i] << ": ";
+        quickSortAndAnalysis[i].myMethod(path[i], ref[i], 4);
+    }
+    cout << "End of test." << endl;
     return 0;
 }
