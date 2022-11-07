@@ -10,9 +10,9 @@ using namespace std;
 
 int main() {
 	/* Image */
-	string imgDirectory10cm = "/home/pi/Desktop/opencv-test/img/10cm/";
-	string imgDirectory20cm = "/home/pi/Desktop/opencv-test/img/20cm/";
-	string imgDirectory30cm = "/home/pi/Desktop/opencv-test/img/30cm/";
+	string imgDirectory10cm = "/home/pi/Desktop/opencv-test/res/img/10cm/";
+	string imgDirectory20cm = "/home/pi/Desktop/opencv-test/res/img/20cm/";
+	string imgDirectory30cm = "/home/pi/Desktop/opencv-test/res/img/30cm/";
 	string imgFormat = ".png";
 	string imgName[13] = {"90", "75", "60", "45", "30", "15", "00", "-15", "-30", "-45", "-60", "-75", "-90"};
 	string imgPath10cm[13];
@@ -31,7 +31,7 @@ int main() {
 	/* Eye Detection */
 	CascadeClassifier faceCascade;
 	vector<Rect> eyes;
-	faceCascade.load("/home/pi/Desktop/opencv-test/haarcascade/haarcascade_eye_tree_eyeglasses.xml");
+	faceCascade.load("/home/pi/Desktop/opencv-test/res/haarcascade/haarcascade_eye_tree_eyeglasses.xml");
     int faceDetectDelay = 0;
 
 	/* 10 cm */

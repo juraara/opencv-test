@@ -484,7 +484,7 @@ class MyClass: public BlinkDetectionAlgorithm {
         QuickSortAndAnalysis_1800 obj6(1800);
 
         CascadeClassifier eyeCascade;
-        if (!eyeCascade.load("/home/pi/Desktop/opencv-test/haarcascade/haarcascade_eye_tree_eyeglasses.xml")) {
+        if (!eyeCascade.load("/home/pi/Desktop/opencv-test/res/haarcascade/haarcascade_eye_tree_eyeglasses.xml")) {
             std::cerr << "Could not load eye detector." << std::endl;
             return;
         }
@@ -536,7 +536,7 @@ class MyClass: public BlinkDetectionAlgorithm {
 
 int main() {
     int ref[3][255] = {{7246,7278,7340,7506,7685,7850,7917,8019,8154,8186,8288,8415,8533,8690,8821,8953,9055,9201,9296,9319,9466,9509,9611,9733,9821,9891,9937,10035,10090,10254,10457,10579,10742}, {9852,9955,10291}, {7722,7775,7821,7880,7959,8062,8238,8486,8654,8771,8846,8930,9057,9220,9340,9478,9675,9813,9870,9978,10107,10228,10418,10599}};
-    string path[3] = {"/home/pi/Desktop/opencv-test/vid/Test-01.mp4", "/home/pi/Desktop/opencv-test/vid/Test-02.mp4", "/home/pi/Desktop/opencv-test/vid/Test-03.mp4"};
+    string path[3] = {"/home/pi/Desktop/opencv-test/res/vid/Test-01.mp4", "/home/pi/Desktop/opencv-test/res/vid/Test-02.mp4", "/home/pi/Desktop/opencv-test/res/vid/Test-03.mp4"};
     
     // cout << "Blink Detection Accuracy Comparison Testing (1/4)" << endl;
     // cout << "Contour Detection and Analysis" << endl;
