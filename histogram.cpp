@@ -9,6 +9,7 @@
 #include <opencv2/imgproc.hpp>
 #include <iostream>
 #include <vector>
+#include <string>
 
 using namespace cv;
 using namespace std;
@@ -143,11 +144,13 @@ int main() {
 		/* Print to Terminal */
 		double duration = lClock() - start; // stop counting
 		double averageTimePerFrame = averageDuration(duration); // avg time per frame
+		string eyeStatus = "Close"; // status of eye (close or open)
 		if (tempEyeState == 1) { 
-			cout << "(Close)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl; 
+			eyeStatus = "Close";
 		} else {
-			cout << "(Open)" << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl;
+			eyeStatus = "Open";
 		}
+		cout << eyeStatus << " Avg tpf: " << averageTimePerFrame << "ms" << " Avg fps: " << averageFps() << " Perclos: " << perclos << " Frame no: " << frameNo++ << endl; 
 		
 		/* Exit at esc key */
 		if (waitKey(1) == 27) {
