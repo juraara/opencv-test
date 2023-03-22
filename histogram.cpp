@@ -59,9 +59,7 @@ int main() {
 	int frameNo = 0;
 	
 	/* Black pixel values */
-	float prevFrame = 0.0;
-	float currentFrame = 0.0;
-	float percentageDifference = 0.0;
+	float prevFrame = 0.0, currentFrame = 0.0, percentageDifference = 0.0;
 	
 	/* Print Util */
 	int tempEyeState = 0;
@@ -94,8 +92,8 @@ int main() {
 		const float* channelRanges = channelRange;
 		int numberBins = 256;
 		
-		int histWidth = 512;
-		int histHeight = 400;
+		// set histogram size
+		int histWidth = 512, histHeight = 400;
 		int binWidth = cvRound((double)histWidth / histSize);
 		
 		calcHist(&upper, 1, 0, Mat(), histogram, 1, &numberBins, &channelRanges);
